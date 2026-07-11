@@ -25,6 +25,14 @@ export interface Category {
   iconName?: string;
 }
 
+export interface SidebarLink {
+  id: string;
+  label: string;
+  url: string;
+  iconName?: string;
+  external?: boolean;
+}
+
 export interface AppState {
   noticeText: string;
   comingSoonUrl?: string;
@@ -32,6 +40,10 @@ export interface AppState {
   maintenanceMode?: boolean;
   categories: Category[];
   channels: Channel[];
+  apkDownloadUrl?: string;
+  sidebarLinks?: SidebarLink[];
+  websiteName?: string;
+  logoUrl?: string;
 }
 
 const DEFAULT_STATE: AppState = {
@@ -41,6 +53,10 @@ const DEFAULT_STATE: AppState = {
   maintenanceMode: false,
   categories: [],
   channels: [],
+  apkDownloadUrl: "",
+  sidebarLinks: [],
+  websiteName: "Sports W",
+  logoUrl: "",
 };
 
 export function getApiBaseUrl(): string {

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { RotateCw, Moon, Heart, Trophy, Tv, AlertCircle, Video, Radio, Sparkles, Mic, Settings, Check, MoreVertical, Search, LayoutGrid } from 'lucide-react';
-import Hls from 'hls.js';
+import { RotateCw, Moon, Heart, Trophy, Tv, AlertCircle, Video, Radio, Sparkles, Mic, Settings, Check, MoreVertical, Search, LayoutGrid, X, Link as LinkIcon } from 'lucide-react';
 import { useAppState, getApiBaseUrl, getWebSocketUrl, getStreamUrl } from './store';
 import AddaRoom from './components/AddaRoom';
+import HlsPlayer from './components/HlsPlayer';
+import { getCountryFlag } from './utils';
 
 const ICON_MAP: Record<string, any> = {
   Heart,
@@ -16,303 +17,9 @@ const ICON_MAP: Record<string, any> = {
 // @ts-ignore
 import logoImg from './assets/images/nexarion_logo_1783781161849.jpg';
 
-// Dynamic country flags resolver for Asia/Global countries (Bangla + English support)
-const getCountryFlag = (name: string): string => {
-  if (!name) return "";
-  const clean = name.trim().toLowerCase();
-  
-  const mapping: Record<string, string> = {
-    'bangladesh': '🇧🇩', 'বাংলাদেশ': '🇧🇩', 'bd': '🇧🇩', 'ban': '🇧🇩',
-    'india': '🇮🇳', 'ভারত': '🇮🇳', 'ind': '🇮🇳',
-    'pakistan': '🇵🇰', 'পাকিস্তান': '🇵🇰', 'pak': '🇵🇰',
-    'sri lanka': '🇱🇰', 'শ্রীলঙ্কা': '🇱🇰', 'sl': '🇱🇰', 'srilanka': '🇱🇰',
-    'afghanistan': '🇦🇫', 'আফগানিস্তান': '🇦🇫', 'afg': '🇦🇫',
-    'nepal': '🇳🇵', 'নেপাল': '🇳🇵', 'nep': '🇳🇵',
-    'maldives': '🇲🇻', 'মালদ্বীপ': '🇲🇻', 'mdv': '🇲🇻',
-    'bhutan': '🇧🇹', 'ভুটান': '🇧🇹', 'bhu': '🇧🇹',
-    'uae': '🇦🇪', 'ইউএই': '🇦🇪', 'united arab emirates': '🇦🇪',
-    'oman': '🇴🇲', 'ওমান': '🇴🇲',
-    'saudi arabia': '🇸🇦', 'সৌদি আরব': '🇸🇦', 'saudi': '🇸🇦', 'ksa': '🇸🇦',
-    'qatar': '🇶🇦', 'কাতার': '🇶🇦',
-    'japan': '🇯🇵', 'জাপান': '🇯🇵', 'jpn': '🇯🇵',
-    'south korea': '🇰🇷', 'দক্ষিণ কোরিয়া': '🇰🇷', 'korea': '🇰🇷', 'kor': '🇰🇷',
-    'china': '🇨🇳', 'চীন': '🇨🇳', 'chn': '🇨🇳',
-    'australia': '🇦🇺', 'অস্ট্রেলিয়া': '🇦🇺', 'aus': '🇦🇺',
-    'new zealand': '🇳🇿', 'নিউজিল্যান্ড': '🇳🇿', 'nz': '🇳🇿',
-    'england': '🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'ইংল্যান্ড': '🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'eng': '🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'uk': '🇬🇧',
-    'south africa': '🇿🇦', 'দক্ষিণ আফ্রিকা': '🇿🇦', 'rsa': '🇿🇦', 'sa': '🇿🇦',
-    'west indies': '🌴', 'ওয়েস্ট ইন্ডিজ': '🌴', 'wi': '🌴',
-    'usa': '🇺🇸', 'ইউএসএ': '🇺🇸', 'america': '🇺🇸', 'united states': '🇺🇸',
-    'argentina': '🇦🇷', 'আর্জেন্টিনা': '🇦🇷', 'arg': '🇦🇷',
-    'brazil': '🇧🇷', 'ব্রাজিল': '🇧🇷', 'bra': '🇧🇷',
-    'germany': '🇩🇪', 'জার্মানি': '🇩🇪', 'ger': '🇩🇪',
-    'france': '🇫🇷', 'ফ্রান্স': '🇫🇷', 'fra': '🇫🇷',
-    'spain': '🇪🇸', 'স্পেন': '🇪🇸', 'esp': '🇪🇸',
-    'portugal': '🇵🇹', 'পর্তুগাল': '🇵🇹', 'por': '🇵🇹',
-    'italy': '🇮🇹', 'ইতালি': '🇮🇹', 'ita': '🇮🇹',
-  };
-
-  if (mapping[clean]) return mapping[clean];
-  for (const [key, flag] of Object.entries(mapping)) {
-    if (clean.includes(key) || key.includes(clean)) {
-      return flag;
-    }
-  }
-  return "🏳️";
-};
-
-const HlsPlayer = ({ url }: { url: string }) => {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [levels, setLevels] = useState<any[]>([]);
-  const [currentLevel, setCurrentLevel] = useState<number>(-1);
-  const [isAuto, setIsAuto] = useState(true);
-  const [showSettings, setShowSettings] = useState(false);
-  const [hlsInstance, setHlsInstance] = useState<Hls | null>(null);
-  
-  // Custom manual streaming engine profiles (8K, 4K, 1080p, etc.)
-  const [selectedProfile, setSelectedProfile] = useState<string>("Auto");
-  const [isApplyingProfile, setIsApplyingProfile] = useState(false);
-
-  useEffect(() => {
-    let hls: Hls | null = null;
-    const video = videoRef.current;
-    
-    if (!video) return;
-    
-    setError(null);
-    setLevels([]);
-    setCurrentLevel(-1);
-    setIsAuto(true);
-    setShowSettings(false);
-
-    if (url.startsWith('http://') && window.location.protocol === 'https:') {
-      setError("Mixed content error: Cannot play HTTP stream on HTTPS site. Please use an HTTPS stream or a VPN.");
-    }
-
-    const lowerUrl = url.toLowerCase();
-    const isHls = lowerUrl.includes('.m3u8') || lowerUrl.includes('m3u8') || lowerUrl.includes('/api/stream-proxy');
-
-    if (isHls && Hls.isSupported()) {
-      // High performance fine-tuning for buffer-free playback
-      hls = new Hls({
-        enableWorker: true,
-        lowLatencyMode: true,
-        backBufferLength: 90,
-        maxBufferLength: 30,
-        maxMaxBufferLength: 60,
-        maxBufferSize: 60 * 1024 * 1024, // 60MB max
-        liveSyncDuration: 1.5,
-        liveMaxLatencyDuration: 3,
-        maxStarvationDelay: 1,
-        maxLoadingDelay: 1,
-        abrBandWidthFactor: 0.95,
-        abrBandWidthUpFactor: 0.8,
-        manifestLoadingTimeOut: 15000,
-        manifestLoadingMaxRetry: 10,
-        manifestLoadingRetryDelay: 500,
-        levelLoadingTimeOut: 15000,
-        levelLoadingMaxRetry: 10,
-        levelLoadingRetryDelay: 500,
-        fragLoadingTimeOut: 30000,
-        fragLoadingMaxRetry: 10,
-        fragLoadingRetryDelay: 500,
-      });
-
-      setHlsInstance(hls);
-
-      hls.loadSource(url);
-      hls.attachMedia(video);
-      
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        setLevels(hls?.levels || []);
-        video.play().catch(e => console.log('Auto-play prevented:', e));
-      });
-
-      hls.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
-        setCurrentLevel(data.level);
-      });
-
-      hls.on(Hls.Events.ERROR, (event, data) => {
-        if (data.fatal) {
-          switch (data.type) {
-            case Hls.ErrorTypes.NETWORK_ERROR:
-              setError('Network error. Check your connection or the stream URL.');
-              hls?.startLoad();
-              break;
-            case Hls.ErrorTypes.MEDIA_ERROR:
-              setError('Media error. Trying to recover...');
-              hls?.recoverMediaError();
-              break;
-            default:
-              hls?.destroy();
-              setError('Fatal stream error.');
-              break;
-          }
-        }
-      });
-    } else {
-      video.src = url;
-      video.addEventListener('loadedmetadata', () => {
-        video.play().catch(e => console.log('Auto-play prevented:', e));
-      });
-    }
-
-    return () => {
-      if (hls) {
-        hls.destroy();
-      }
-      setHlsInstance(null);
-    };
-  }, [url]);
-
-  const selectLevel = (levelIndex: number) => {
-    if (!hlsInstance) return;
-    if (levelIndex === -1) {
-      hlsInstance.currentLevel = -1;
-      setIsAuto(true);
-      setSelectedProfile("Auto");
-    } else {
-      hlsInstance.currentLevel = levelIndex;
-      setIsAuto(false);
-      setCurrentLevel(levelIndex);
-      setSelectedProfile(hlsInstance.levels[levelIndex].height ? `${hlsInstance.levels[levelIndex].height}p` : `Level ${levelIndex}`);
-    }
-    setShowSettings(false);
-  };
-
-  const applyTuningProfile = (profile: string) => {
-    if (!hlsInstance) return;
-    setIsApplyingProfile(true);
-    setSelectedProfile(profile);
-    setShowSettings(false);
-
-    const config = hlsInstance.config;
-    if (profile === "8K Ultra HD" || profile === "4K Ultra HD") {
-      config.maxBufferLength = 90;
-      config.maxMaxBufferLength = 180;
-      config.maxBufferSize = 250 * 1024 * 1024;
-      config.lowLatencyMode = false;
-    } else if (profile === "1080p Full HD") {
-      config.maxBufferLength = 40;
-      config.maxMaxBufferLength = 90;
-      config.maxBufferSize = 100 * 1024 * 1024;
-      config.lowLatencyMode = true;
-    } else {
-      config.maxBufferLength = 15;
-      config.maxMaxBufferLength = 30;
-      config.maxBufferSize = 30 * 1024 * 1024;
-      config.lowLatencyMode = true;
-    }
-
-    const currentLevelVal = hlsInstance.currentLevel;
-    hlsInstance.currentLevel = currentLevelVal;
-
-    setTimeout(() => {
-      setIsApplyingProfile(false);
-    }, 400);
-  };
-
-  const getLevelLabel = (level: any) => {
-    const height = level.height ? `${level.height}p` : 'Unknown';
-    const bitrate = level.bitrate ? `${(level.bitrate / 1000000).toFixed(1)} Mbps` : '';
-    return bitrate ? `${height} (${bitrate})` : height;
-  };
-
-  return (
-    <div className="relative w-full h-full bg-black group/player">
-      <video
-        ref={videoRef}
-        className="w-full h-full object-contain"
-        controls
-        autoPlay
-        playsInline
-      />
-
-      {isApplyingProfile && (
-        <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-30 backdrop-blur-sm">
-          <div className="text-center">
-            <RotateCw className="w-8 h-8 text-cyan-400 animate-spin mx-auto mb-2" />
-            <p className="text-xs text-white font-bold tracking-wider">Applying {selectedProfile} Optimization...</p>
-          </div>
-        </div>
-      )}
-
-      <div className="absolute top-4 right-4 z-20">
-        <button
-          onClick={() => setShowSettings(!showSettings)}
-          className="p-2 bg-black/60 hover:bg-black/90 backdrop-blur-md rounded-full border border-gray-800/40 text-gray-300 hover:text-white transition-all shadow-lg cursor-pointer"
-          title="ভিডিও রেজোলিউশন"
-        >
-          <Settings size={18} className={`${showSettings ? 'rotate-45' : ''} transition-transform duration-300`} />
-        </button>
-
-        {showSettings && (
-          <div className="absolute right-0 mt-2 bg-[#0d0e12]/95 backdrop-blur-md border border-gray-800/80 rounded-xl py-1.5 w-52 shadow-2xl z-30 transition-all text-left max-h-80 overflow-y-auto">
-            <div className="px-3 py-1 border-b border-gray-800/40 text-[10px] text-gray-500 font-bold tracking-wider uppercase">
-              ভিডিও রেজোলিউশন ও বাফার
-            </div>
-            {levels.length > 0 ? (
-              <>
-                <button
-                  onClick={() => selectLevel(-1)}
-                  className="w-full text-left px-3 py-2 text-xs hover:bg-cyan-500/10 hover:text-cyan-400 flex items-center justify-between transition-colors cursor-pointer"
-                >
-                  <span className="font-semibold text-white">Auto (স্বয়ংক্রিয়)</span>
-                  {isAuto && <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />}
-                </button>
-                {levels.map((level, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => selectLevel(idx)}
-                    className="w-full text-left px-3 py-2 text-xs hover:bg-cyan-500/10 hover:text-cyan-400 flex items-center justify-between transition-colors font-mono text-gray-300 cursor-pointer"
-                  >
-                    <span>{getLevelLabel(level)}</span>
-                    {!isAuto && currentLevel === idx && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
-                    )}
-                  </button>
-                ))}
-              </>
-            ) : (
-              <>
-                {[
-                  { name: "8K Ultra HD", label: "8K Ultra HD (ম্যাক্স বাফার)" },
-                  { name: "4K Ultra HD", label: "4K Ultra HD (সুপার কোয়ালিটি)" },
-                  { name: "1080p Full HD", label: "1080p FHD (ফুল এইচডি)" },
-                  { name: "720p HD", label: "720p HD (স্ট্যান্ডার্ড)" },
-                  { name: "480p SD", label: "480p SD (সুপার ফাস্ট)" }
-                ].map((item) => (
-                  <button
-                    key={item.name}
-                    onClick={() => applyTuningProfile(item.name)}
-                    className="w-full text-left px-3 py-2 text-xs hover:bg-cyan-500/10 hover:text-cyan-400 flex items-center justify-between transition-colors text-gray-300 cursor-pointer"
-                  >
-                    <span>{item.label}</span>
-                    {selectedProfile === item.name && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
-                    )}
-                  </button>
-                ))}
-              </>
-            )}
-          </div>
-        )}
-      </div>
-
-      {error && (
-        <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center p-6 text-center z-20">
-          <AlertCircle size={32} className="text-red-500 mb-2" />
-          <p className="text-xs text-white max-w-sm mb-4 leading-normal">{error}</p>
-        </div>
-      )}
-    </div>
-  );
-};
-
 export default function TvApp() {
   const { state, loading } = useAppState(15000);
-  const { noticeText, categories, channels, comingSoonUrl, comingSoonType, maintenanceMode } = state;
+  const { noticeText, categories, channels, comingSoonUrl, comingSoonType, maintenanceMode, websiteName, logoUrl } = state;
   
   const [activeServerId, setActiveServerId] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState('all');
@@ -323,6 +30,7 @@ export default function TvApp() {
   const [localLiveChannels, setLocalLiveChannels] = useState<any[]>([]);
   const [isAddaOpen, setIsAddaOpen] = useState(false);
   const [isAddaJoined, setIsAddaJoined] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeWatcherCount, setActiveWatcherCount] = useState<number>(1);
 
   // Real-time active watcher tracker socket connection
@@ -472,7 +180,100 @@ export default function TvApp() {
   });
 
   return (
-    <div className="min-h-screen bg-[#03050c] text-gray-100 font-sans selection:bg-cyan-500/30 flex flex-col lg:flex-row pb-20">
+    <div className="min-h-screen bg-[#03050c] text-gray-100 font-sans selection:bg-cyan-500/30 flex flex-col lg:flex-row pb-28">
+      {/* SIDEBAR / DRAWER MENU (Mobile & Unified) */}
+      <div className={`fixed inset-y-0 left-0 z-[60] w-72 bg-[#050610] border-r border-cyan-500/10 transform transition-transform duration-500 ease-in-out shadow-[10px_0_40px_rgba(0,0,0,0.8)] flex flex-col ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="p-6 border-b border-white/5 bg-[#090b16]/50">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-cyan-500/10 rounded-xl border border-cyan-500/20">
+                {logoUrl ? (
+                  <img src={logoUrl} alt="Logo" className="w-6 h-6 object-contain" />
+                ) : (
+                  <LayoutGrid className="text-cyan-400" size={20} />
+                )}
+              </div>
+              <div>
+                <h2 className="text-white font-black tracking-tight text-lg leading-tight Bengali">{websiteName || 'Sports W'}</h2>
+                <span className="text-[10px] text-cyan-500 font-black tracking-[0.2em] uppercase">Premium Hub</span>
+              </div>
+            </div>
+            <button 
+              onClick={() => setIsSidebarOpen(false)}
+              className="p-2 hover:bg-white/5 rounded-lg text-gray-500 hover:text-white transition-colors cursor-pointer"
+            >
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-hide">
+          {/* APK Download Section */}
+          {state.apkDownloadUrl && (
+            <div className="bg-gradient-to-br from-cyan-500/10 to-teal-500/5 p-4 rounded-2xl border border-cyan-500/20">
+              <h3 className="text-xs font-black text-cyan-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                <RotateCw size={14} className="animate-spin-slow" />
+                <span>অ্যান্ড্রয়েড অ্যাপ</span>
+              </h3>
+              <a 
+                href={state.apkDownloadUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full bg-cyan-500 hover:bg-cyan-400 text-black font-black py-3 rounded-xl transition-all shadow-[0_4px_15px_rgba(6,182,212,0.3)] active:scale-95 text-xs Bengali"
+              >
+                <Video size={16} />
+                এপিকে ডাউনলোড করুন
+              </a>
+              <p className="text-[10px] text-gray-500 mt-2.5 text-center Bengali font-medium">সবচেয়ে দ্রুত গতির লাইভ টিভির জন্য আমাদের অফিসিয়াল অ্যাপ ডাউনলোড করুন।</p>
+            </div>
+          )}
+
+          {/* Sidebar Links Section */}
+          <div className="space-y-1.5">
+            <h3 className="px-3 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-3 Bengali">গুরুত্বপূর্ণ লিঙ্ক সমূহ</h3>
+            {(!state.sidebarLinks || state.sidebarLinks.length === 0) ? (
+              <p className="px-3 text-[10px] text-gray-600 italic Bengali">কোনো লিঙ্ক এখনো যুক্ত করা হয়নি</p>
+            ) : (
+              state.sidebarLinks.map((link) => (
+                <a 
+                  key={link.id}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-all group Bengali text-xs font-bold"
+                >
+                  <div className="p-2 rounded-lg bg-gray-900 group-hover:bg-cyan-500/10 transition-colors">
+                    <LinkIcon size={14} className="group-hover:text-cyan-400" />
+                  </div>
+                  <span>{link.label}</span>
+                </a>
+              ))
+            )}
+          </div>
+
+          <div className="pt-4 border-t border-white/5">
+             <div className="px-3 py-4 rounded-2xl bg-gray-900/30 border border-white/5">
+               <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 Bengali">সাপোর্ট ও যোগাযোগ</h4>
+               <p className="text-[10px] text-gray-400 leading-relaxed Bengali">আমাদের সাথে যেকোনো প্রয়োজনে ফেসবুক পেইজে মেসেজ দিন। আপনার মতামত আমাদের কাছে গুরুত্বপূর্ণ।</p>
+             </div>
+          </div>
+        </div>
+
+        <div className="p-6 border-t border-white/5 bg-[#03050c]">
+          <div className="flex items-center gap-3 text-[10px] text-gray-600 font-bold uppercase tracking-widest">
+            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+            <span>Nexarion Premium Live</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div 
+          onClick={() => setIsSidebarOpen(false)}
+          className="fixed inset-0 z-[55] bg-black/70 backdrop-blur-md transition-opacity duration-500"
+        />
+      )}
       {/* 1. GORGEOUS DESKTOP SIDEBAR ("সাইডবার / সাইট ১২") */}
       <aside className="hidden lg:flex w-72 bg-[#060813]/95 border-r border-[#151a30]/50 p-6 flex-col justify-between shrink-0 sticky top-0 h-screen z-40 backdrop-blur-xl">
         <div className="space-y-6">
@@ -544,35 +345,45 @@ export default function TvApp() {
       {/* 2. MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Sticky Header for mobile & controls */}
-        <header className="flex items-center justify-between px-4 py-3 bg-[#050711] border-b border-[#141b38]/60 backdrop-blur-md sticky top-0 z-30">
-          <div className="flex items-center gap-3">
+        <header className="flex items-center justify-between px-4 py-2 bg-[#050711] border-b border-[#141b38]/60 backdrop-blur-md sticky top-0 z-30 h-14">
+          <div className="flex items-center gap-2">
             <button 
-              className="text-gray-400 hover:text-cyan-400 transition-colors p-1.5 bg-[#0e122b] border border-[#21294d]/40 rounded-xl cursor-pointer animate-spin-hover" 
+              onClick={() => setIsSidebarOpen(true)}
+              className="text-gray-400 hover:text-cyan-400 transition-colors p-2 bg-[#0e122b] border border-[#21294d]/40 rounded-xl cursor-pointer"
+              title="মেনু"
+            >
+              <LayoutGrid size={18} />
+            </button>
+            <button 
+              className="text-gray-400 hover:text-cyan-400 transition-colors p-2 bg-[#0e122b] border border-[#21294d]/40 rounded-xl cursor-pointer" 
               onClick={() => window.location.reload()}
               title="রিফ্রেশ করুন"
             >
               <RotateCw size={15} />
             </button>
-            <span className="text-[10px] bg-[#0f1d3a] border border-cyan-500/20 text-cyan-400 px-2.5 py-1 rounded-full font-bold lg:hidden">
-              Nexarion TV
-            </span>
           </div>
 
-          {/* Logo on mobile only */}
-          <div className="flex items-center gap-2 lg:hidden">
-            <img src={logoImg} alt="Logo" className="w-7 h-7 rounded-full border border-cyan-500/30" />
-            <h1 className="text-base font-extrabold tracking-tight bg-gradient-to-r from-cyan-400 via-teal-400 to-blue-500 text-transparent bg-clip-text font-sans">
-              Nexarion TV
+          {/* Logo/Name centered */}
+          <div className="flex items-center gap-2">
+            {logoUrl ? (
+              <img src={logoUrl} alt="Logo" className="w-8 h-8 rounded-lg object-contain border border-white/5 shadow-lg" />
+            ) : (
+              <div className="p-1.5 bg-cyan-500/10 rounded-lg border border-cyan-500/20">
+                <Radio size={16} className="text-cyan-400" />
+              </div>
+            )}
+            <h1 className="text-base font-black tracking-tighter text-white font-sans Bengali">
+              {websiteName || 'Sports W'}
             </h1>
           </div>
 
-          {/* Real-time Watcher Count displaying next to Web Logo */}
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-cyan-950/40 border border-cyan-500/20 rounded-full shadow-[0_0_12px_rgba(6,182,212,0.15)]">
-            <span className="flex h-2 w-2 relative">
+          {/* Real-time Watcher Count */}
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-cyan-950/40 border border-cyan-500/20 rounded-full">
+            <span className="flex h-1.5 w-1.5 relative">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-cyan-500"></span>
             </span>
-            <span className="text-[10px] font-bold text-cyan-400 font-mono tracking-wide">{activeWatcherCount} Watching</span>
+            <span className="text-[9px] font-black text-cyan-400 font-mono tracking-wide">{activeWatcherCount} LIVE</span>
           </div>
         </header>
 
@@ -824,45 +635,51 @@ export default function TvApp() {
         </div>
       </div>
 
-      {/* 3. STUNNING FLOATING BOTTOM NAVIGATION BAR ("নেভিগেশন বাটন / সাইট ১২") */}
-      <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 z-45 bg-[#090b16]/90 backdrop-blur-xl border border-white/[0.08] rounded-full px-5 py-2 flex items-center justify-center gap-4 sm:gap-6 shadow-[0_15px_40px_rgba(0,0,0,0.85)] max-w-full w-auto">
+      {/* 3. COMPACT DOCKED BOTTOM NAVIGATION BAR */}
+      <nav className="fixed bottom-0 left-0 right-0 z-45 bg-[#090b16]/95 backdrop-blur-2xl border-t border-white/10 px-4 py-2.5 flex items-center justify-around shadow-[0_-10px_40px_rgba(0,0,0,0.8)]">
         <button 
           onClick={() => {
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
-          className="flex flex-col items-center gap-0.5 px-3 py-1 text-gray-400 hover:text-cyan-400 transition-colors cursor-pointer"
+          className="flex flex-col items-center gap-1 text-gray-500 hover:text-cyan-400 transition-all cursor-pointer group active:scale-90"
         >
-          <Tv size={16} />
-          <span className="text-[8px] font-black tracking-wider uppercase font-sans">Home</span>
+          <Tv size={20} className="group-hover:scale-110 transition-transform" />
+          <span className="text-[8px] font-black tracking-widest uppercase font-sans Bengali">হোম</span>
         </button>
-
-        <div className="h-4 w-[1px] bg-white/[0.08]" />
 
         <button 
           onClick={() => setIsAddaOpen(true)}
-          className="flex flex-col items-center gap-0.5 px-3 py-1 relative text-cyan-400 hover:text-cyan-300 transition-colors cursor-pointer"
+          className="flex flex-col items-center gap-1 relative text-cyan-400 hover:text-cyan-300 transition-all cursor-pointer group active:scale-90"
         >
-          <span className="absolute -top-1 right-2 flex h-1.5 w-1.5">
+          <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
           </span>
-          <Mic size={16} className="animate-bounce" />
-          <span className="text-[8px] font-black tracking-wider uppercase font-sans">Live Adda</span>
+          <Mic size={20} className="animate-bounce" />
+          <span className="text-[8px] font-black tracking-widest uppercase font-sans Bengali">আড্ডা</span>
         </button>
-
-        <div className="h-4 w-[1px] bg-white/[0.08]" />
 
         <button 
           onClick={() => {
             const el = document.getElementById('search-trigger');
             if (el) {
               el.scrollIntoView({ behavior: 'smooth' });
+              const input = el.querySelector('input');
+              if (input) input.focus();
             }
           }}
-          className="flex flex-col items-center gap-0.5 px-3 py-1 text-gray-400 hover:text-cyan-400 transition-colors cursor-pointer"
+          className="flex flex-col items-center gap-1 text-gray-500 hover:text-cyan-400 transition-all cursor-pointer group active:scale-90"
         >
-          <Search size={16} />
-          <span className="text-[8px] font-black tracking-wider uppercase font-sans">Search</span>
+          <Search size={20} className="group-hover:scale-110 transition-transform" />
+          <span className="text-[8px] font-black tracking-widest uppercase font-sans Bengali">সার্চ</span>
+        </button>
+        
+        <button 
+          onClick={() => setIsSidebarOpen(true)}
+          className="flex flex-col items-center gap-1 text-gray-500 hover:text-cyan-400 transition-all cursor-pointer group active:scale-90"
+        >
+          <LayoutGrid size={20} className="group-hover:scale-110 transition-transform" />
+          <span className="text-[8px] font-black tracking-widest uppercase font-sans Bengali">মেনু</span>
         </button>
       </nav>
 

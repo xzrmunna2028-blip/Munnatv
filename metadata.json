@@ -1,6 +1,6 @@
 {
-  "name": "Nexarion TV",
-  "description": "Premium TV Channel streaming application.",
+  "name": "Sports W",
+  "description": "Premium Sports & TV Channel streaming application.",
   "requestFramePermissions": ["camera", "microphone"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

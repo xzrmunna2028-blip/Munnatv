@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAppState, saveAppStateToBackend, AppState, Channel, StreamServer, Category, getApiBaseUrl } from './store';
-import { Settings, Plus, Trash2, LogOut, Video, Link as LinkIcon, Image as ImageIcon, Save, AlertCircle, Users, ShieldAlert, VolumeX, MicOff } from 'lucide-react';
+import { Settings, Plus, Trash2, LogOut, Video, Link as LinkIcon, Image as ImageIcon, Save, AlertCircle, Users, ShieldAlert, VolumeX, MicOff, LayoutGrid, Sparkles } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 // @ts-ignore
 import logoImg from './assets/images/nexarion_logo_1783781161849.jpg';
@@ -8,7 +8,7 @@ import logoImg from './assets/images/nexarion_logo_1783781161849.jpg';
 export default function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
-  const [activeTab, setActiveTab] = useState<'notice' | 'categories' | 'channels' | 'banning'>('notice');
+  const [activeTab, setActiveTab] = useState<'notice' | 'categories' | 'channels' | 'banning' | 'sidebar' | 'branding'>('notice');
 
   // Banning & Active viewers states
   const [activeUsers, setActiveUsers] = useState<any[]>([]);
@@ -334,6 +334,24 @@ export default function Admin() {
             >
               <ShieldAlert className="mr-3 flex-shrink-0 h-5 w-5" />
               Users & Banning
+            </button>
+            <button
+              onClick={() => setActiveTab('sidebar')}
+              className={`w-full flex items-center px-4 py-3 rounded-lg font-medium transition-colors ${
+                activeTab === 'sidebar' ? 'bg-cyan-900/50 text-cyan-400 border border-cyan-800/50' : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+              }`}
+            >
+              <LayoutGrid className="mr-3 flex-shrink-0 h-5 w-5" />
+              Sidebar & App Link
+            </button>
+            <button
+              onClick={() => setActiveTab('branding')}
+              className={`w-full flex items-center px-4 py-3 rounded-lg font-medium transition-colors ${
+                activeTab === 'branding' ? 'bg-cyan-900/50 text-cyan-400 border border-cyan-800/50' : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+              }`}
+            >
+              <Sparkles className="mr-3 flex-shrink-0 h-5 w-5" />
+              Branding & Logo
             </button>
           </nav>
         </aside>
@@ -687,6 +705,151 @@ export default function Admin() {
                   </button>
                 </div>
               )}
+            </div>
+          )}
+
+          {activeTab === 'sidebar' && (
+            <div className="space-y-6">
+              <div className="bg-black border border-gray-800 rounded-xl p-6">
+                <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                  <ImageIcon size={20} className="text-cyan-400" />
+                  <span>APK Download Link (এপিকে লিঙ্ক)</span>
+                </h2>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-400 mb-1.5">Direct APK Download URL</label>
+                    <input
+                      type="text"
+                      value={localState.apkDownloadUrl || ''}
+                      onChange={(e) => updateState({ ...localState, apkDownloadUrl: e.target.value })}
+                      placeholder="e.g. https://nexarion.tv/download/nexarion-v1.apk"
+                      className="w-full bg-gray-900 border border-gray-700 text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-cyan-500 transition-colors"
+                    />
+                    <p className="mt-1.5 text-xs text-gray-500 leading-normal">
+                      আপনার এন্ড্রয়েড অ্যাপের ডাইরেক্ট ডাউনলোড লিঙ্ক এখানে দিন। এটি সাইডবারে দেখানো হবে।
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-black border border-gray-800 rounded-xl p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                    <LinkIcon size={20} className="text-cyan-400" />
+                    <span>Sidebar Useful Links (সাইডবার লিঙ্ক)</span>
+                  </h2>
+                  <button 
+                    onClick={() => {
+                      const newLink = { id: Date.now().toString(), label: 'New Link', url: '', iconName: 'LayoutGrid' };
+                      updateState({ ...localState, sidebarLinks: [...(localState.sidebarLinks || []), newLink] });
+                    }}
+                    className="flex items-center space-x-2 bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                  >
+                    <Plus size={16} />
+                    <span>Add Link</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4">
+                  {(localState.sidebarLinks || []).length === 0 && (
+                    <p className="text-gray-500 italic text-sm text-center py-4">No sidebar links added yet.</p>
+                  )}
+                  {(localState.sidebarLinks || []).map((link) => (
+                    <div key={link.id} className="bg-gray-900/50 border border-gray-800 rounded-xl p-4 grid grid-cols-1 md:grid-cols-3 gap-4 relative">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-400 mb-1">Label (নাম)</label>
+                        <input
+                          type="text"
+                          value={link.label}
+                          onChange={(e) => {
+                            updateState({
+                              ...localState,
+                              sidebarLinks: (localState.sidebarLinks || []).map(l => l.id === link.id ? { ...l, label: e.target.value } : l)
+                            });
+                          }}
+                          className="w-full bg-black border border-gray-700 text-white rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-cyan-500"
+                        />
+                      </div>
+                      <div className="md:col-span-2 flex gap-2 items-end">
+                        <div className="flex-1">
+                          <label className="block text-xs font-semibold text-gray-400 mb-1">URL (লিঙ্ক)</label>
+                          <input
+                            type="text"
+                            value={link.url}
+                            onChange={(e) => {
+                              updateState({
+                                ...localState,
+                                sidebarLinks: (localState.sidebarLinks || []).map(l => l.id === link.id ? { ...l, url: e.target.value } : l)
+                              });
+                            }}
+                            className="w-full bg-black border border-gray-700 text-white rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-cyan-500"
+                          />
+                        </div>
+                        <button 
+                          onClick={() => {
+                            updateState({
+                              ...localState,
+                              sidebarLinks: (localState.sidebarLinks || []).filter(l => l.id !== link.id)
+                            });
+                          }}
+                          className="p-2.5 text-red-500 hover:bg-red-950/30 rounded-lg transition-colors"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'branding' && (
+            <div className="space-y-6">
+              <div className="bg-black border border-gray-800 rounded-xl p-6">
+                <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                  <Sparkles size={20} className="text-cyan-400" />
+                  <span>Website Branding (ব্র্যান্ডিং)</span>
+                </h2>
+                
+                <div className="space-y-5">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-400 mb-1.5">Website Name (ওয়েবসাইট নাম)</label>
+                    <input
+                      type="text"
+                      value={localState.websiteName || ''}
+                      onChange={(e) => updateState({ ...localState, websiteName: e.target.value })}
+                      placeholder="e.g. Sports W"
+                      className="w-full bg-gray-900 border border-gray-700 text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-cyan-500 transition-colors"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-400 mb-1.5">Logo URL (লোগো লিঙ্ক)</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={localState.logoUrl || ''}
+                        onChange={(e) => updateState({ ...localState, logoUrl: e.target.value })}
+                        placeholder="https://example.com/logo.png"
+                        className="flex-1 bg-gray-900 border border-gray-700 text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-cyan-500 transition-colors"
+                      />
+                    </div>
+                    <p className="mt-1.5 text-xs text-gray-500 leading-normal">
+                      আপনার ওয়েবসাইটের লোগোটির ডাইরেক্ট লিঙ্ক এখানে দিন। এটি টপ বার এবং সাইডবারে দেখানো হবে।
+                    </p>
+                  </div>
+
+                  {localState.logoUrl && (
+                    <div className="p-4 bg-gray-900/50 rounded-xl border border-gray-800 flex items-center justify-center">
+                      <div className="text-center">
+                        <p className="text-[10px] text-gray-500 uppercase font-black mb-2">Logo Preview</p>
+                        <img src={localState.logoUrl} alt="Logo Preview" className="h-12 w-auto mx-auto object-contain" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
