@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { RotateCw, Moon, Heart, Trophy, Tv, AlertCircle, Video, Radio, Sparkles, Mic, Settings, Check, MoreVertical, Search, LayoutGrid } from 'lucide-react';
 import Hls from 'hls.js';
-import { useAppState } from './store';
+import { useAppState, getApiBaseUrl, getWebSocketUrl, getStreamUrl } from './store';
 import AddaRoom from './components/AddaRoom';
 
 const ICON_MAP: Record<string, any> = {
@@ -327,8 +327,7 @@ export default function TvApp() {
 
   // Real-time active watcher tracker socket connection
   useEffect(() => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const socketUrl = `${protocol}//${window.location.host}/api/watcher`;
+    const socketUrl = getWebSocketUrl('/api/watcher');
     let ws: WebSocket | null = null;
     let reconnectTimeout: any = null;
 
@@ -370,7 +369,7 @@ export default function TvApp() {
   useEffect(() => {
     const fetchLiveStreams = async () => {
       try {
-        const response = await fetch('/api/nms/api/streams');
+        const response = await fetch(`${getApiBaseUrl()}/api/nms/api/streams`);
         if (response.ok) {
           const data = await response.json();
           const streamsList: any[] = [];
@@ -627,7 +626,7 @@ export default function TvApp() {
             <div className="relative rounded-2xl overflow-hidden border border-[#1e295d]/50 bg-black shadow-[0_0_50px_rgba(6,182,212,0.15)]">
               <div className="aspect-video w-full relative flex justify-center items-center bg-black">
                 {activeServer?.url ? (
-                  <HlsPlayer url={(activeServer.url.startsWith('http://') && window.location.protocol === 'https:') ? `/api/stream-proxy?url=${encodeURIComponent(activeServer.url)}` : activeServer.url} />
+                  <HlsPlayer url={getStreamUrl(activeServer.url)} />
                 ) : comingSoonUrl ? (
                   <div className="absolute inset-0 bg-black flex flex-col items-center justify-center overflow-hidden">
                     {comingSoonType === 'video' ? (

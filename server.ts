@@ -66,6 +66,17 @@ async function startServer() {
 
   app.use(express.json());
 
+  // Global CORS Middleware to support hosting the frontend on external domains (Cloudflare, Vercel, etc.)
+  app.use((req, res, next) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    if (req.method === "OPTIONS") {
+      return res.sendStatus(200);
+    }
+    next();
+  });
+
   // Proxy HTTP stream and playlist requests to Node Media Server
   app.all(['/live/*', '/api/nms/*'], (req, res) => {
     apiProxy.web(req, res, { target: 'http://127.0.0.1:8009' });

@@ -43,8 +43,54 @@ const DEFAULT_STATE: AppState = {
   channels: [],
 };
 
+export function getApiBaseUrl(): string {
+  if (typeof window === 'undefined') return '';
+  const host = window.location.host;
+  const isLocalOrRunApp = host.includes('localhost') || 
+                          host.includes('127.0.0.1') || 
+                          host.includes('.run.app') || 
+                          host.includes('0.0.0.0');
+  if (isLocalOrRunApp) {
+    return '';
+  }
+  return 'https://nexarion-tv-438422593575.asia-southeast1.run.app';
+}
+
+export function getStreamUrl(url: string): string {
+  if (!url) return '';
+  const baseUrl = getApiBaseUrl();
+  
+  // If the stream URL is relative (starts with '/' like '/live/')
+  if (url.startsWith('/')) {
+    return `${baseUrl || window.location.origin}${url}`;
+  }
+  
+  // If it's http and current protocol is https, we proxy it via stream-proxy
+  if (url.startsWith('http://') && window.location.protocol === 'https:') {
+    const proxyBase = baseUrl || '';
+    return `${proxyBase}/api/stream-proxy?url=${encodeURIComponent(url)}`;
+  }
+  
+  return url;
+}
+
+export function getWebSocketUrl(path: string): string {
+  if (typeof window === 'undefined') return '';
+  const host = window.location.host;
+  const isLocalOrRunApp = host.includes('localhost') || 
+                          host.includes('127.0.0.1') || 
+                          host.includes('.run.app') || 
+                          host.includes('0.0.0.0');
+  if (isLocalOrRunApp) {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${protocol}//${host}${path}`;
+  }
+  return `wss://nexarion-tv-438422593575.asia-southeast1.run.app${path}`;
+}
+
 export async function fetchAppState(): Promise<AppState> {
-  const res = await fetch('/api/state');
+  const baseUrl = getApiBaseUrl();
+  const res = await fetch(`${baseUrl}/api/state`);
   if (res.ok) {
     return await res.json();
   }
@@ -52,7 +98,8 @@ export async function fetchAppState(): Promise<AppState> {
 }
 
 export async function saveAppStateToBackend(state: AppState) {
-  const res = await fetch('/api/state', {
+  const baseUrl = getApiBaseUrl();
+  const res = await fetch(`${baseUrl}/api/state`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

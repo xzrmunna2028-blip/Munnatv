@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageSquare, Mic, MicOff, Send, Users, PhoneOff, User, Volume2, VolumeX, X } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { getWebSocketUrl } from '../store';
 
 interface AddaRoomProps {
   roomId: string;
@@ -147,8 +148,7 @@ export default function AddaRoom({ roomId, roomName, onClose, onJoinedStatusChan
 
     // 2. Establish WebSocket connection
     try {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/api/meeting`;
+      const wsUrl = getWebSocketUrl('/api/meeting');
       const socket = new WebSocket(wsUrl);
       socketRef.current = socket;
 

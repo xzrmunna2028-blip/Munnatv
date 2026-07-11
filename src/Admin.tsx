@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAppState, saveAppStateToBackend, AppState, Channel, StreamServer, Category } from './store';
+import { useAppState, saveAppStateToBackend, AppState, Channel, StreamServer, Category, getApiBaseUrl } from './store';
 import { Settings, Plus, Trash2, LogOut, Video, Link as LinkIcon, Image as ImageIcon, Save, AlertCircle, Users, ShieldAlert, VolumeX, MicOff } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 // @ts-ignore
@@ -53,7 +53,7 @@ export default function Admin() {
     try {
       const authHeader = 'Bearer MUNNA12061';
       
-      const usersRes = await fetch('/api/admin/active-users', {
+      const usersRes = await fetch(`${getApiBaseUrl()}/api/admin/active-users`, {
         headers: { 'Authorization': authHeader }
       });
       if (usersRes.ok) {
@@ -62,7 +62,7 @@ export default function Admin() {
         setActiveUsers(uData.voice || []);
       }
 
-      const bansRes = await fetch('/api/admin/banned-ips', {
+      const bansRes = await fetch(`${getApiBaseUrl()}/api/admin/banned-ips`, {
         headers: { 'Authorization': authHeader }
       });
       if (bansRes.ok) {
@@ -84,7 +84,7 @@ export default function Admin() {
 
   const handleBanIp = async (ip: string, reason: string) => {
     try {
-      const res = await fetch('/api/admin/ban-ip', {
+      const res = await fetch(`${getApiBaseUrl()}/api/admin/ban-ip`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -105,7 +105,7 @@ export default function Admin() {
 
   const handleUnbanIp = async (ip: string) => {
     try {
-      const res = await fetch('/api/admin/unban-ip', {
+      const res = await fetch(`${getApiBaseUrl()}/api/admin/unban-ip`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
